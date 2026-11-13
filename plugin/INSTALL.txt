@@ -1,0 +1,26 @@
+Blues Combo 62 - installing the plugin
+======================================
+
+macOS (Logic Pro, GarageBand, and other Audio Unit hosts)
+  1. Copy "Blues Combo 62.component" to  ~/Library/Audio/Plug-Ins/Components/
+     (in Finder: Go > Go to Folder..., paste that path).
+     For VST3 hosts, copy "Blues Combo 62.vst3" to  ~/Library/Audio/Plug-Ins/VST3/
+  2. This build is not signed with an Apple Developer ID, so macOS quarantines it.
+     Open Terminal and run:
+       xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/"Blues Combo 62.component"
+  3. Restart Logic Pro. The plugin is under Audio FX > Audio Units > Combo62.
+     Put it on an audio track with a mono (or stereo) guitar DI; use the Mono->Stereo version.
+
+Windows
+  Copy the "Blues Combo 62.vst3" folder to  C:\Program Files\Common Files\VST3\
+
+Linux
+  Copy "Blues Combo 62.vst3" to  ~/.vst3/   and/or  "Blues Combo 62.lv2" to  ~/.lv2/
+
+Using it
+  - Plug into a high-impedance (instrument) input. Adjust Input Trim so hard strums are
+    well below clipping; the amp expects roughly a real guitar's level.
+  - "Load IR..." at the top of the plugin window loads your own cabinet impulse response
+    (WAV, AIFF or FLAC). "Use built-in cab" returns to the modelled 2x12.
+  - Oversampling: 4x is the normal setting; 8x costs about twice the CPU.
+  - The plugin adds 20 samples of latency, which it reports to the host.

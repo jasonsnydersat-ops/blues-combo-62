@@ -1,0 +1,74 @@
+name: Build plugins
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Linux, os: ubuntu-24.04 }
+          - { name: macOS, os: macos-latest }
+          - { name: Windows, os: windows-latest }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Linux build packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libjack-jackd2-dev libfreetype-dev libfontconfig1-dev \
+            libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev \
+            libglu1-mesa-dev mesa-common-dev
+
+      - name: Configure
+        run: |
+          EXTRA=""
+          if [ "$RUNNER_OS" = "macOS" ]; then EXTRA='-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64'; fi
+          cmake -S plugin -B build -DCMAKE_BUILD_TYPE=Release "$EXTRA"
+
+      - name: Build
+        run: cmake --build build --config Release --parallel 4
+
+      - name: Engine self-test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Collect plugins
+        run: |
+          A=build/BluesCombo62_artefacts/Release
+          mkdir -p dist
+          cp -R "$A"/VST3/*.vst3 dist/
+          if [ -d "$A/AU" ]; then cp -R "$A"/AU/*.component dist/; fi
+          if [ -d "$A/LV2" ]; then cp -R "$A"/LV2/*.lv2 dist/; fi
+          cp plugin/INSTALL.txt dist/
+          ls -la dist
+
+      - name: Sign (ad hoc) and validate the Audio Unit
+        if: runner.os == 'macOS'
+        run: |
+          codesign --force --deep -s - "dist/Blues Combo 62.component" "dist/Blues Combo 62.vst3"
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R "dist/Blues Combo 62.component" ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar 2>/dev/null || true
+          auval -v aufx Bc62 Cb62
+
+      - name: Zip
+        run: |
+          cd dist
+          if [ "$RUNNER_OS" = "Windows" ]; then 7z a -tzip "../BluesCombo62-${{ matrix.name }}.zip" .
+          else zip -r -y "../BluesCombo62-${{ matrix.name }}.zip" .; fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: BluesCombo62-${{ matrix.name }}
+          path: BluesCombo62-${{ matrix.name }}.zip
